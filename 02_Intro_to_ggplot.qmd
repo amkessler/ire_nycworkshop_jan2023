@@ -1,0 +1,251 @@
+---
+title: "Making Charts using ggplot2"
+author: "Aaron Kessler adapted from MJW"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+format:
+  html:
+    self-contained: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Load libraries
+library(tidyverse) 
+library(janitor) 
+library(readxl) 
+library(scales)
+library(lubridate)
+library(ggthemes)
+library(esquisse)
+
+#import data
+county_pop <-  read_xlsx('county_pop.xlsx') %>% 
+  clean_names()
+
+
+#make a smaller table to work with
+metro_pop <- county_pop %>% 
+  filter(geography %in% c("HENNEPIN", 
+                          "RAMSEY", 
+                          "SCOTT", 
+                          "WASHINGTON", 
+                          "DAKOTA", 
+                          "ANOKA", 
+                          "CARVER")) %>% 
+  arrange(desc(pop_estimate2016))
+
+
+```
+
+Let's take a look at our data
+```{r}
+
+metro_pop
+
+```
+
+# Basics of ggplot2
+
+Basic column/bar chart
+```{r}
+
+ggplot(metro_pop, aes(x = geography, y = pop_estimate2016)) +
+  geom_col()
+
+```
+
+Convert to horizontal lines
+```{r}
+
+ggplot(metro_pop, aes(x = geography, y = pop_estimate2016)) +
+  geom_col()+
+  coord_flip()
+
+```
+
+
+Sorting by values and changing colors.  
+Color is for the outline; fill is inside the bars.
+
+```{r}
+
+ggplot(metro_pop, aes(x = reorder(geography, pop_estimate2016), y = pop_estimate2016)) + 
+  geom_col(color = "black", fill = "red") +
+  coord_flip()
+
+```
+
+Use colorbrewer2.org to get better colors
+```{r}
+
+ggplot(metro_pop, aes(x = reorder(geography, pop_estimate2016), y = pop_estimate2016)) + 
+  geom_col(color = "#9ebcda", fill = "#9ebcda")+
+  coord_flip()
+
+```
+
+improve the axis titles and labels
+https://ggplot2.tidyverse.org/reference/scale_continuous.html
+note: the Y axis is along the bottom because this is flipped
+
+we'll use the scales package here for the comma function
+```{r}
+
+ggplot(metro_pop, aes(x = reorder(geography, pop_estimate2016), y = pop_estimate2016)) + 
+  geom_col(color = "#9ebcda", fill = "#9ebcda")+
+  coord_flip()+
+  scale_y_continuous(name = "Population", labels = scales::comma)+
+  scale_x_discrete(name = "County")
+```
+
+Add titles 
+```{r}
+
+ggplot(metro_pop, aes(x = reorder(geography, pop_estimate2016), y = pop_estimate2016)) + 
+  geom_col(color = "#9ebcda", fill = "#9ebcda") +
+  coord_flip()+
+  scale_y_continuous(name = "Population", labels = scales::comma) +
+  scale_x_discrete(name = "County") +
+  labs(title = "Twin Cities metro county population", 
+       subtitle = "2016",
+       caption = "Source: U.S. Census Bureau")
+```
+
+use a theme from the ggthemes library
+High charts theme
+
+```{r}
+
+ggplot(metro_pop, aes(x = reorder(geography, pop_estimate2016), y = pop_estimate2016)) + 
+  geom_col(color = "#9ebcda", fill = "#9ebcda")+
+  coord_flip()+
+  scale_y_continuous(name = "Population", labels = scales::comma) +
+  scale_x_discrete(name = "County") +
+  labs(title = "Twin Cities metro county population", 
+       subtitle = "2016",
+       caption = "Source: U.S. Census Bureau") +
+  theme_hc()
+```
+
+FiveThirtyEight theme
+
+```{r}
+
+ggplot(metro_pop, aes(x = reorder(geography, pop_estimate2016), y = pop_estimate2016)) + 
+  geom_col(color = "#9ebcda", fill = "#9ebcda") +
+  coord_flip() +
+  scale_y_continuous(name = "Population", labels = scales::comma) +
+  scale_x_discrete(name = "County") +
+  labs(title = "Twin Cities metro county population", 
+       subtitle = "2016",
+       caption = "Source: U.S. Census Bureau") +
+  theme_fivethirtyeight()
+```
+
+
+
+# Part 2
+
+We'll look at opiate death data.
+
+```{r}
+deaths <- read_csv('opiate_deaths.csv',
+                   col_types=cols(.default=col_character(),
+                        BIRTHDATE=col_date("%m/%d/%Y"),
+                        DEATHDATE=col_date("%m/%d/%Y"),
+                        INJURY_DATE=col_date("%m/%d/%Y"),
+                        AGEYEARS=col_integer())) %>% 
+          clean_names()
+
+head(deaths)
+
+```
+
+Group by year.
+```{r}
+deaths_by_year <- deaths %>% 
+  group_by(yr = year(deathdate)) %>% 
+  summarise(numdeaths = n())
+
+deaths_by_year
+```
+
+Basic line chart
+```{r}
+
+ggplot(deaths_by_year, aes(x = yr, y = numdeaths)) + 
+  geom_line()
+```
+
+
+Change color and size of the line
+```{r}
+
+ggplot(deaths_by_year, aes(x = yr, y = numdeaths)) + 
+  geom_line(color="#2ca25f", size=1)
+```
+
+
+Fix the axis values and labels
+```{r}
+
+ggplot(deaths_by_year, aes(x = yr, y = numdeaths)) + 
+  geom_line(color="#2ca25f", size=1)+
+  scale_x_continuous(name = "Year", breaks = seq(2005, 2017, 2))+
+  scale_y_continuous(name = "Deaths", breaks = seq(0, 500, 100))
+```
+
+Add labels and theme
+```{r}
+
+ggplot(deaths_by_year, aes(x = yr, y = numdeaths)) + 
+  geom_line(color="#2ca25f", size=1) +
+  scale_x_continuous(name="Year", breaks=seq(2005, 2017, 2)) +
+  scale_y_continuous(name="Deaths", breaks=seq(0, 500, 100)) +
+  theme_hc() +
+    labs(title = "Opiate deaths in Minnesota", 
+       subtitle = "2005-2017",
+       caption = "Source: Minnesota Department of Health")
+```
+
+Grouped bar chart
+```{r}
+
+
+deaths_yr_gender <-  deaths %>% 
+  group_by(yr=year(deathdate), gender) %>% 
+  summarise(numdeaths = n())
+
+
+ggplot(deaths_yr_gender) +
+  # add bar for each yr colored by gender
+  geom_bar(aes(x = yr, y = numdeaths, fill = gender),
+           stat = "identity", position = "dodge") 
+
+
+```
+
+Stacked bar chart
+```{r}
+
+ggplot(deaths_yr_gender, aes(x = yr, y = numdeaths, fill = gender)) +
+  geom_col()+
+  scale_fill_manual(values = c("#468189", "#9DBEBB"), 
+                    labels=c("Female", "Male"))
+```
+
+Export a chart
+```{r}
+
+mychart <- ggplot(deaths_yr_gender, aes(x = yr, y = numdeaths, fill = gender)) +
+  geom_col()+
+  scale_fill_manual(values = c("#468189", "#9DBEBB"), 
+                    labels=c("Female", "Male"))
+
+mychart
+
+ggsave("deaths_by_gender.jpg", mychart, width=8, height=5, units="in", dpi="print")
+
+```
+
