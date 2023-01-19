@@ -85,6 +85,18 @@ profit <- revenue - expenses
 profit
 
 
+# Now by itself, R has certain capabilities built in.
+# But the real power comes from using what are known as "packages,"
+# which you can think of kind of like apps on your phone.
+
+# To use a package, you first need to install it on your computer.
+# You only do this once (hopefully).
+
+# And then for each script, you tell R you want to use the package
+# by what's known as "calling" it like so:
+library(tidyverse)
+
+
 ### Now, let's start to actually look at some data.
 # First, we're going to switch over from using regular R scripts
 # to Quarto, the next generation of RMarkdown, which has some 
