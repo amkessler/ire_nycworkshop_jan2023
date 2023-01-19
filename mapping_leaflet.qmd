@@ -1,0 +1,122 @@
+---
+title: "Mapping Example With Leaflet"
+author: "Aaron Kessler"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+format:
+  html:
+    self-contained: true
+    toc: true
+    toc-location: left
+    theme: yeti
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(leaflet)
+library(sf)
+
+
+```
+
+
+
+```{r}
+# Create a basic map centered on Midtown Manhattan
+m <- leaflet() %>% addTiles() %>% setView(lng = -73.9857, lat = 40.7638, zoom = 14)
+```
+
+
+```{r}
+# Add a marker to the map at the location of Times Square
+m %>% addMarkers(lng = -73.9858, lat = 40.7588, popup = "Times Square")
+```
+
+
+```{r}
+# Display the map
+m
+```
+
+
+```{r}
+# Adding multiple markers to a map:
+
+# Create a basic map centered on Midtown Manhattan
+m <- leaflet() %>% addTiles() %>% setView(lng = -73.9857, lat = 40.7638, zoom = 14)
+
+# Create a data frame with the locations and popups for multiple markers
+markers <- data.frame(lng = c(-73.9858, -73.9667, -73.9729), 
+                      lat = c(40.7588, 40.7850, 40.7599), 
+                      popup = c("Times Square", "Central Park", "Empire State Building"))
+
+# Add the markers to the map
+m %>% addMarkers(data = markers)
+```
+
+
+```{r}
+# Adding a layer control to toggle different map layers:
+
+# Add a satellite layer to the map
+m %>% addProviderTiles("Esri.WorldImagery", group = "Satellite")
+```
+
+
+```{r}
+# Add a streets layer to the map
+m %>% addProviderTiles("OpenStreetMap.Mapnik", group = "Streets")
+```
+
+
+```{r}
+# Add a layer control to toggle between the satellite and streets layers
+m %>% addLayersControl(overlayGroups = c("Satellite", "Streets"))
+```
+
+
+```{r}
+# Adding a GeoJSON layer to the map:
+
+# Read in a GeoJSON file
+# We'll source one from NYC's geospatial dataset of neighborhood boundaries:
+# https://www.nyc.gov/site/planning/data-maps/open-data/census-download-metadata.page
+
+manhattan_neighborhoods <- st_read("https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Neighborhood_Tabulation_Areas_2020/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson")
+```
+
+
+```{r}
+# isolate just manhattan
+manhattan_neighborhoods <- manhattan_neighborhoods %>% 
+  filter(BoroName == "Manhattan")
+```
+
+
+```{r}
+# Create a basic map centered on Midtown Manhattan
+m <- leaflet() %>% addTiles() %>% setView(lng = -73.9857, lat = 40.7638, zoom = 14)
+
+m
+```
+
+
+```{r}
+# Add the GeoJSON layer to the map
+m %>% addPolygons(data = manhattan_neighborhoods)
+```
+
+
+```{r}
+# give it some color options
+m %>% addPolygons(data = manhattan_neighborhoods, weight = 2, color = "white", fillOpacity = 0.7, fillColor = "blue")
+```
+
+
+```{r}
+# Save as an option to display the map
+map_neighborhoods <- m %>% addPolygons(data = manhattan_neighborhoods, weight = 2, color = "white", fillOpacity = 0.7, fillColor = "blue")
+
+map_neighborhoods
+```
