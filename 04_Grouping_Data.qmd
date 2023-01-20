@@ -1,0 +1,209 @@
+---
+title: "Intro to Data Analysis in R - Grouping"
+author: "Aaron Kessler"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+format:
+  html:
+    self-contained: true
+    toc: true
+    toc-location: left
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load the packages we'll need
+# Remember, think of this like packing for our trip
+# (We don't take the whole closet, only what we need)
+library(tidyverse)
+library(readxl)
+library(writexl)
+library(nycflights13)
+
+```
+
+## Grouping and Aggregates
+
+One of the most powerful things we can do when exploring analysis in R is to aggregate our data using `group_by()` and `summarise()`. This works kind of like pivot tables in Excel...only with significantly more power.
+
+First, let's load the New York to Sarasota flight data we saved in the last script. In this case, let's grab our Excel file and use a function from the `readxl` package to import it.
+
+Let's also walk through the visual wizard available in RStudio for importing csv and Excel files.
+
+```{r}
+
+srqflights <- read_excel("data/sarasota_q1_flights.xlsx")
+
+srqflights
+```
+
+Great, now we have our several hundred NYC to Sarasota flights for each day in the first quarter.
+
+All of our previous methods of filtering and sorting still work here too, of course. For example, let's say we only want to see flights from LaGuardia which leave before noon, and we only care to examine flights in January - it's so cold, good time for an escape from the city.
+
+```{r}
+
+srqflights %>% 
+  filter(origin == "LGA",
+         month == 1,
+         sched_dep_time < 1200)
+
+
+```
+
+Bingo.
+
+Now we get some interesting results here - can you spot the trend? There's actually only one flight that meets our filtering criteria, and our data is showing one row for that daily flight scheduled every day of the month of January.
+
+Now we could do something like arrange the records to show which day had the longest delay for that particular flight route:
+
+```{r}
+
+srqflights %>% 
+  filter(origin == "LGA",
+         month == 1,
+         sched_dep_time < 1200) %>% 
+  arrange(desc(dep_delay))
+
+
+```
+
+Something must have gone very wrong on Jan. 15th, and there are two other flights with noticeable delays - though from there it looks like most of the time our 'ol flight 1903 departs either roughly on time or even early.
+
+But as you might imagine, filtering and arranging only get us so far if we want to start asking broader questions. That's where grouping comes in.
+
+Let's say we do indeed want to escape NYC this winter for the sunny beaches of Sarasota during the first quarter, and for this example we'll assume that flights in the past still exist now for this year itself.
+
+We'd like to try and use our data to ask a few questions: how many flight routes are there in the first place? And what are the most reliable ones we might want to choose so we don't get stuck cooling our heels at the airport instead of being beach-bound on time.
+
+### Counting
+
+Rather than each daily flight listed separately, let's see how many exist and count them up to give us a more high-level picture of our options.
+
+First, how many fly from each NYC airport?
+
+```{r}
+
+srqflights %>% 
+  group_by(origin) %>% 
+  summarise(n()) 
+
+
+```
+
+Well that's helpful to know to begin with - there are no Newark options, so we're either going to use JFK or LaGuardia to get there.
+
+We can also group by more than one factor, so let's look at each carrier's options from those airports.
+
+```{r}
+
+srqflights %>% 
+  group_by(carrier, flight, origin) %>% 
+  summarise(n())
+
+```
+
+Ok, now we're getting somewhere - we've gone from having hundreds of daily listings in our original data, to now revealing how many distinct flight routes fly to Sarasota. We can see these six flights are our options to explore, three from Delta (DL) and three from JetBlue (B6).
+
+Now one thing we'll want to get in the habit of doing, because it makes future analysis much easier, is give our new aggregate column a name of our own. The default is a little messy and causing heartburn if we want to operate on it later.
+
+So let's do that simply by using the `=` (single this time, note) to assign a name of our choosing.
+
+```{r}
+
+srqflights %>% 
+  group_by(carrier, flight, origin) %>% 
+  summarise(count = n())
+
+```
+
+That's better.
+
+Now remember our original goal of wanting to travel in January? We can chain together these group by operations with our filtering as well, simply by adding that to the mix.
+
+```{r}
+
+srqflights %>% 
+  filter(month == 1) %>% 
+  group_by(carrier, flight, origin) %>% 
+  summarise(count = n())
+
+```
+
+We can see there four distinct flights flying to Sarasota in January, and while most have daily departures, though one JetBlue flight does not.
+
+Can we do something other than just counting them? Yes, indeed.
+
+Let's ask a question: of our four options here, which one on average has the best on-time departure in January.
+
+We can answer that by instead of counting, using another function withing `summarise`, which is asking for the `mean`. To do that, we tell R the name of the column we want to calculate the average on, in this case `dep_delay`.
+
+```{r}
+
+srqflights %>% 
+  filter(month == 1) %>% 
+  group_by(carrier, flight, origin) %>% 
+  summarise(avg_delay = mean(dep_delay))
+
+
+```
+
+In a millisecond, our code has done the calculations and given us the average number of minutes the January flights were delayed.
+
+We already see quite a difference with one of the flights compared with the others. But there's also one missing? What's happening there?
+
+That's because by default, R doesn't handle blank entries well for averaging - if there are blanks, it'll just return an NA instead. And remember that we had that one flight which indeed didn't have daily departures each day like the others.
+
+So we can easily handle that by adding an argument to calculate the average regardless of whether different flights have different numbers of rows.
+
+```{r}
+
+srqflights %>% 
+  filter(month == 1) %>% 
+  group_by(carrier, flight, origin) %>% 
+  summarise(avg_delay = mean(dep_delay, na.rm = TRUE))
+
+```
+
+Perfect, now we've got them all in there.
+
+If we're planning our trip, we can see that one JetBlue flight was consistently worse in January. So maybe we want to cross that one off our list.
+
+The best performer was the Delta flight out of LGA.
+
+### Iterating and re-purposing our code
+
+The great thing about a programming language such as R, is that once you've figured out the initial code to give you what you want, it's super easy to make changes and iterate on different possibilities. You don't have to start from scratch each time, and you can follow where your mind takes you...
+
+Let's say for example, ok, we now know the best on-time flight in January. What if we wanted to expand to look at the entire dataset of all three months of the first quarter? All we'd have to do is this.
+
+```{r}
+
+srqflights %>% 
+  group_by(carrier, flight, origin) %>% 
+  summarise(avg_delay = mean(dep_delay, na.rm = TRUE))
+
+```
+
+And just like that, we have the average delays for all six flights in the quarter.
+
+Similarly, maybe we want to see how each airline stacks up against the other, regardless of their individual flights. How does Delta and JetBlue compare overall. We can make a small tweak and have our answer.
+
+```{r}
+
+srqflights %>% 
+  group_by(carrier) %>% 
+  summarise(avg_delay = mean(dep_delay, na.rm = TRUE))
+
+```
+
+If we wanted to compare the two airports themselves? A similarly easy change to get that for us as well.
+
+```{r}
+
+srqflights %>% 
+  group_by(origin) %>% 
+  summarise(avg_delay = mean(dep_delay, na.rm = TRUE))
+```
+
+We now have a lot more information at our fingertips than we did a few minutes ago about how our various choices compare. And the sky's the limit (no pun intended) for what you can do to do analysis in such a fashion.
