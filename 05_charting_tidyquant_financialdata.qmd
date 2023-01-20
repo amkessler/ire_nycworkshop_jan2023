@@ -19,14 +19,11 @@ library(tidyquant)
 
 ```
 
-
-
 ```{r}
 # set the stock ticker and the start and end dates for the data that you want to download. For example:
 
 ticker <- "MSFT"  # Set the stock ticker
 ```
-
 
 ```{r}
 # Use the tq_get() function from the tidyquant package to download the stock data. This function returns a data frame containing the date, open, high, low, and close prices for each day. For example:
@@ -36,14 +33,12 @@ stock_data <- tq_get(ticker, get = "stock.prices", from = "2022-01-01")
 stock_data
 ```
 
-
 ```{r}
 # Use the ggplot2 package to create a line chart of the stock's closing price over time. You can do this by using the ggplot() and geom_line() functions, and setting the x aesthetic to the date column and the y aesthetic to the close column. For example:
 
 ggplot(stock_data, aes(x = date, y = close)) +
   geom_line()
 ```
-
 
 ```{r}
 ############
@@ -53,20 +48,17 @@ aapl_prices  <- tq_get("AAPL", get = "stock.prices", from = "2022-01-01")
 aapl_prices
 ```
 
-
 ```{r}
 aapl_prices %>% 
   arrange(desc(date))
 ```
 
-
 ```{r}
 aapl_prices %>%
   ggplot(aes(x = date, y = close)) +
   geom_line() +
-  labs(title = "AAPL Line Chart", y = "Closing Price", x = "")
+  labs(title = "Apple Stock Price", y = "Closing Price", x = "")
 ```
-
 
 ```{r}
 # simple moving averages
@@ -74,25 +66,24 @@ aapl_prices %>%
 aapl_prices %>%
   ggplot(aes(x = date, y = close)) +
   geom_line() +
-  labs(title = "AAPL Line Chart", y = "Closing Price", x = "") +
-  geom_ma(ma_fun = SMA, n = 30, linetype = 5, color = "darkblue", size = 1.25) +
+  labs(title = "Apple Stock Price", y = "Closing Price", x = "") +
   geom_ma(ma_fun = SMA, n = 50, color = "red", size = 1.25) +
   theme_minimal()
 ```
-
 
 ```{r}
 ### multiple companies
 
 
 #with only a start and no end date
-mycompanies  <- tq_get(c("AAPL", "MSFT", "NYT", "XOM"), get = "stock.prices", from = "2022-01-01")
+mycompanies  <- tq_get(c("AAPL", "MSFT", "NYT", "XOM"), 
+                       get = "stock.prices", 
+                       from = "2022-01-01")
 mycompanies 
 
 mycompanies %>% 
   count(symbol)
 ```
-
 
 ```{r}
 mycompanies %>%
@@ -102,7 +93,6 @@ mycompanies %>%
   facet_wrap(~ symbol, ncol = 2, scale = "free_y")
 ```
 
-
 ```{r}
 # simple moving averages
 
@@ -110,12 +100,10 @@ mycompanies %>%
   ggplot(aes(x = date, y = close)) +
   geom_line() +
   labs(title = "", y = "Closing Price", x = "") +
-  geom_ma(ma_fun = SMA, n = 30, linetype = 5, color = "darkblue", size = 1.25) +
   geom_ma(ma_fun = SMA, n = 50, color = "red", size = 1.25) +
   facet_wrap(~ symbol, ncol = 2, scale = "free_y") +
   theme_minimal()
 ```
-
 
 ```{r}
 # FRED Economic Data
@@ -123,13 +111,11 @@ mycompanies %>%
 # categories: https://fred.stlouisfed.org/categories
 ```
 
-
 ```{r}
 # US Regular All Formulations Gas Price (GASREGW), weekly
 gasprices_weekly <- tq_get("GASREGW", get = "economic.data", from = "2022-01-01")
 gasprices_weekly
 ```
-
 
 ```{r}
 ggplot(gasprices_weekly, aes(x = date, y = price)) +
@@ -137,103 +123,8 @@ ggplot(gasprices_weekly, aes(x = date, y = price)) +
   theme_minimal()
 ```
 
-
 ```{r}
 # 30 year mortgage rate average, weekly
 mortgate_30yr_weekly <- tq_get("MORTGAGE30US", get = "economic.data", from = "2022-01-01")
 mortgate_30yr_weekly
 ```
-
-
-```{r}
-#both on one chart?
-combined <- ggplot(NULL, aes(x = date, y = price)) +
-  geom_line(data = mortgate_30yr_weekly, color = "darkgreen") +
-  geom_line(data = gasprices_weekly, color = "darkred") +
-  theme_minimal()
-
-combined
-
-#################
-```
-
-
-```{r}
-# import stock data
-stock_data <- tq_get("AAPL", from = "2010-01-01", to = "2020-01-01")
-
-# Creating a scatter plot:
-# create a scatter plot of stock prices
-ggplot(stock_data, aes(x = date, y = close)) + 
-  geom_point() + 
-  ggtitle("Scatter Plot of Stock Prices") + 
-  xlab("Date") + 
-  ylab("Close Price")
-```
-
-
-```{r}
-# Creating a line plot:
-# create a line plot of stock prices
-ggplot(stock_data, aes(x = date, y = close)) + 
-  geom_line() +
-  geom_smooth(method = "loess") +
-  ggtitle("Line Plot of Stock Prices") + 
-  xlab("Date") + 
-  ylab("Close Price")
-```
-
-
-```{r}
-# Creating a bar plot:
-
-# calculate stock returns
-stock_data$returns <- ROC(stock_data$close)
-
-# create a bar plot of stock returns
-ggplot(stock_data, aes(x = date, y = returns)) + 
-  geom_bar(stat = "identity", fill = "blue") +
-  ggtitle("Bar Plot of Stock Returns") + 
-  xlab("Date") + 
-  ylab("Returns")
-```
-
-
-```{r}
-# Creating a histogram:
-# create a histogram of stock returns
-ggplot(stock_data, aes(x = returns)) + 
-  geom_histogram(binwidth = 0.01) +
-  geom_density() +
-  ggtitle("Histogram of Stock Returns") + 
-  xlab("Returns") + 
-  ylab("Frequency")
-```
-
-
-```{r}
-# Creating a box plot:
-# create a box plot of stock returns
-ggplot(stock_data, aes(x = year(date), y = returns)) + 
-  geom_boxplot(fill = "blue") +
-  ggtitle("Box Plot of Stock Returns by Year") + 
-  xlab("Year") + 
-  ylab("Returns")
-```
-
-
-```{r}
-# Creating a heatmap:
-# calculate daily returns
-stock_data$day_returns <- ROC(stock_data$close, type = "discrete")
-
-# create a heatmap of daily returns
-ggplot(stock_data, aes(x = year(date), y = month(date), fill = day_returns)) +
-  geom_tile() +
-  scale_fill_gradient(low = "white", high = "red") +
-  ggtitle("Heatmap of Daily Returns") +
-  xlab("Year") +
-  ylab("Month")
-
-```
-
