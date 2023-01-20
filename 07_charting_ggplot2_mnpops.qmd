@@ -1,6 +1,6 @@
 ---
 title: "Making Charts using ggplot2"
-author: "Aaron Kessler adapted from MJW"
+author: "Aaron Kessler adapted from MaryJo Webster"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 format:
   html:
