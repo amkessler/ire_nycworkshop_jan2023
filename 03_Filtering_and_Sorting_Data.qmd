@@ -16,264 +16,247 @@ knitr::opts_chunk$set(echo = TRUE)
 # Remember, think of this like packing for our trip
 # (We don't take the whole closet, only what we need)
 library(tidyverse)
-library(lubridate)
+library(writexl)
 library(nycflights13)
 
 ```
 
+## Using tables in R
+
 In R, data tables are known as dataframes.
-What are "tibbles"...? 
+
+What are "tibbles"...?
+
 They're dataframes, with some additional tidyverse-infused features. Returns more readable output in the console, etc.
 
+## Looking at some data - NY flights
 
-sample data on flights in and out of NYC's three airports - included in the package we loaded above
+We'll begin with a sample dataset on flights in and out of NYC's three airports in 2013 - included in the package we loaded above.
+
 ```{r}
+
 flightdata <- nycflights13::flights
 
 flightdata
 
 ```
 
-What's with that arrow? Let's explain. It's how you "assign" a stored value in R. How you save something with a name of your choosing, instead of just spit it out to the current window itself in the R session.
+What's with that arrow? Let's explain.
 
-We can also return just the few rows using head()
+It's how you "assign" a stored value in R. How you save something with a name of your choosing, instead of just spit it out to the current window itself in the R session.
+
+You saw above that if we want to see a dataframe/tibble, we can feed R just its name and it gets returned - the whole thing, so to speak.
+
+We can also return just the few rows using `head()`.
+
 ```{r}
 
 head(flightdata)
+
 ```
-We can also see a vertical list of all the columns using glimpse()
+
+We can also see a vertical list of all the columns using `glimpse()`.
+
 ```{r}
 
 glimpse(flightdata)
-```
 
+```
 
 ## Filtering and Sorting
 
-Lot of data here, so let's talk about how we can use the tidyverse package's
-functions to filter and sort our data, just like you may be used to in other
-tools like Excel, SQL or other methods.
+There's a lot of flight here. So let's talk about how we can use tidyverse functions to filter and sort our data, just like you may be used to in other tools like Excel, SQL or other methods.
+
+Let's say I only want to see flights that were going to Sarasota, Florida (SRQ).
 
 ```{r}
-#Show me only the flights going to Sarasota, Florida (SRQ) 
+ 
 filter(flightdata, dest == "SRQ")
 
 ```
 
+Why the double-equal-sign? Let's talk about it.
+
+For numeric values, you can also use boolean operators.
 
 ```{r}
-#For numeric values, you can use boolean operators 
 
 filter(flightdata, month <= 3)
+
 ```
 
+Wow, that's still a lot of stuff - that's because we're showing *all* flights in the entire table that were in the first quarter of 2013.
+
+But wait, didn't we just tell R before that we wanted *only the ones from Sarasota*? What gives.
+
+That's because in R, you're never actually changing the original table, unless you explicitly "save" it as a new object. So since our filter above only told R to filter by month, that's what it did.
+
+Now, let's actually filter by more than one thing at a time, so we can capture both our restrictions at once.
 
 ```{r}
-#Now, let's try filtering based on two different variables
 
 filter(flightdata, dest == "SRQ", month <= 3)
 #note the comma separating the filtering terms
+
 ```
 
+There we go.
+
+But there's an even better way to write this out...
+
+### Why I stopped worrying and learned to love the "pipe"
+
+This can still get a little confusing once you wind up with larger amounts of steps to string together.
+
+Enter a glorious feature of the tidyverse: the PIPE. It looks like this `%>%`
+
+The "pipe" (shortcut is CTRL/CMD + SHIFT + M) allows you to chain together commands, in a way that can be more intuitive for how humans thing through each step we're trying to do.
 
 ```{r}
-#This can still get a little confusing once you wind up with larger amounts of steps to string together.  
-#  
-#Enter a glorious feature of the tidyverse: **the PIPE** `%>%`  
-#   
-#The "pipe" (shortcut is CTRL/CMD + SHIFT + M) allows you to chain together commands  
-#  
-#Watch this, and see how much easier it becomes for a human to think through (and read later!)
 
 flightdata %>% 
   filter(dest == "SRQ")
+
 ```
 
+Voila! So what just happened there?
+
+Think of `%>%` as the equivalent of *"and then do this"*...
+
+It takes the result and applies something new to it, in sequential order. This becomes easier to actually see when we add new functions to the chain- so let's talk about *sorting* our data with `arrange()`
 
 ```{r}
-#Voila! So what just happened there?  
-#  
-#Think of %>% as the equivalent of "and then do this"...  
-##It takes the result and then applies something new to it, in sequential order  
-#  
 
-#This becomes easier to see when we add new functions - so let's talk about sorting with arrange()
+flightdata %>% 
+  arrange(dep_delay)
+
 ```
 
+To sort by highest value, add `desc()` - for descending order.
 
 ```{r}
-pollution %>% 
-  arrange(amount)
+
+flightdata %>% 
+  arrange(desc(dep_delay))
+
 ```
 
+Ok, so now that we know how to sort things, let's use the pipe to chain together all of the steps...and see what it looks like:
 
 ```{r}
-#To sort by highest value, add desc()
 
-pollution %>% 
-  arrange(desc(amount))
+flightdata %>% 
+  filter(dest == "SRQ", month <= 3) %>% 
+  arrange(desc(dep_delay))
+
 ```
 
+Bingo, now we have the flights only to Sarasota, in the first quarter of the year, ordered by which flights had the longest delays in their departures.
+
+Think about what we just did here. You can read the code out loud, and it intuitively makes sense.
+
+To see the difference, this is how you would have written the same request to R without the pipe:
 
 ```{r}
-#Now let's go back to our filtering and add arranging, too
 
-pollution %>% 
-  filter(size == "large") %>% 
-  arrange(desc(amount))
+arrange(filter(flightdata, dest == "SRQ", month <= 3), desc(dep_delay))
+
 ```
 
+It's almost like you have to think backwards. But this is actually how many programming languages work, where you have to structure (and read) things almost inside-out. And the example above is still relatively simple...imagine what starts happening when you add all kinds of other steps to the mix.
+
+It can become very difficult to think through the steps when you're writing what you want when you have to think inside-out rather than sequentially. What's more, it can be very difficult for other people to read your code - not to mention harder for you to read your own code later on..!
+
+## Limiting to only certain columns
+
+One more thing - what if we don't want all the columns? Just some of them. That flight dataset has a whole bunch of stuff, and maybe we don't need it all depending on our particular goal for an analysis.
+
+This happens all the time.
+
+It's also frequently the case where you'd like to change the order of columns of your choosing.
+
+Dplyr makes this all easy using the `select()` function. Let's take a look...
 
 ```{r}
-#Add another filter criteria
 
-pollution %>% 
-  filter(size == "large", amount < 100) %>% 
-  arrange(desc(amount))
+flightdata  %>% 
+  select(carrier, flight, origin, dest, month, day, sched_dep_time, dep_delay)
+
 ```
 
-
-```{r}
-#This can be formatted this way as well, if it's even easier for you to read  
-#Let's add another filter criteria
-
-pollution %>% 
-  filter(size == "large", 
-         amount < 100) %>% 
-  arrange(desc(amount))
-```
-
-
-```{r}
-#Think about what we just did here.  
-#  
-#You can read the code and it intuitively makes sense. 
-#Each step sequentially listed and executes in order.  
-#  
-#  
-
-# One more thing - what if we don't want all the columns? Just some.  
-# This happens all the time.
-# 
-# Dplyr makes this easy using **select()`**
-#
-```
-
-
-```{r}
-pollution %>% 
-  select(city, amount)
-```
-
+You can also do the reverse, where you tell it which columns you'd *don't* want.
 
 ```{r}
 # You can pull out just certain variables as well  
 # This results in the same thing as above
 
-pollution %>% 
-  select(-size)
+flightdata %>% 
+  select(-year)
+
 ```
 
+Let's put all this together now, and use it to isolate our Sarasota flights.
 
 ```{r}
-#### PRESIDENTIAL CANDIDATE TRIPS  
-#  
-# Let's take a look at some more intersting data now and try out some of these methods  
-#   
-# Load in data of prez candidate campaign trips between midterms and end of Jan
 
-events <- readRDS("events_saved.rds")
-
-# Let's take a look at what we've got
-
-events
-
-# Even easier to see a dataset with `View()`  
-# Click on its name under the environment tab in upper right, or:
-
-View(events)
-
-# Can also pipe the results of a chain if we wanted to
-
-events %>% 
-  view()
-
-
-# Can you think of when we might find ourselves wanting to do that? (hint: think big datasets)  
-#   
-# Now let's try out some of our filtering and arranging techniques.  
-#   
-# Show all events in Iowa:
-
-events %>% 
-  filter(state == "IA")
-
-# Has Kamala Harris been to Iowa?
-
-events %>% 
-  filter(state == "IA",
-         cand_lastname == "Harris")
-
-# What about another candidate
-
-events %>% 
-  filter(state == "IA",
-         cand_lastname == "Gillibrand")
-
-# Let's talk about **date-specific** stuff.    
-# If I have a properly formatted date in a dataframe, can I sort by it? *Yes.*
-
-events %>% 
-  filter(state == "IA") %>% 
-  arrange(desc(date))
-
-# What if I want to pull out only certain ranges of dates? *Several approaches.*   
-
-# Specifiying a specific date using as.Date()
-
-events %>% 
-  filter(date < as.Date("2018-12-31"))
-
-# Take advantage of the LUBRIDATE package - a tidyverse package specifically for dates  
-# *Note: lubridate needs to be called separately at the top with library(lubridate) - it doesn't yet load with library(tidyverse)*    
-#   
-  
-# Now watch what we can do:
-
-events %>% 
-  filter(year(date) == 2018)
-
-# Just events in January 2019
-
-events %>% 
-  filter(year(date) == 2019,
-         month(date) == 1)
-
-# Events earlier than Dec 2018
-
-events %>% 
-  filter(year(date) == 2018,
-         month(date) < 12)
-
-# Also allows us to do things like, "I only want to see events the *first week of every month*" 
-
-events %>% 
-  filter(day(date) <= 7)
-
-# Who's visiting Iowa the first week of a month? 
-
-events %>% 
-  filter(day(date) <= 7,
-         state == "IA")
-
-#  
-# This is helpful but let's say you're doing this all the time.  
-# It may be easier to create new columns to hold these values.
-#     
-# Next week we'll discuss how to do that with dpylr/tidyverse - **MUTATE**
-#   
-#  
-
+flightdata %>% 
+  filter(dest == "SRQ", month <= 3) %>% 
+  select(carrier, flight, origin, dest, 
+         month, day, sched_dep_time, dep_delay)
 
 ```
 
+Perfect.
+
+Now remember of course, R is only doing what we're asking here: it's returning the slice of the data we've asked for...but it hasn't saved it anywhere.
+
+So if our goal was to focus in on just these first-quarter Sarasota flights from New York, we might want to save the results in a new dataframe object. Let's do that.
+
+```{r}
+
+sarasota_q1 <- flightdata %>% 
+  filter(dest == "SRQ", month <= 3) %>% 
+  select(carrier, flight, origin, dest, 
+         month, day, sched_dep_time, dep_delay)
+
+```
+
+Did it work? It did. Look at the upper right environment box.
+
+Why don't we actually see anything show up below? We didn't ask R to actually show us anything that we saved. We can do that by, again, simply using the name of our new dataframe.
+
+```{r}
+
+sarasota_q1
+
+```
+
+There we go.
+
+## Saving data to a file
+
+Now a key point to remember here is that we've now saved our Sarasota flight data to our R session. And any time we come back later and run this set of steps in the script, we can isolate Sarasota in a similar way.
+
+But -- this doesn't mean we've actually saved the data to a *file*. Which is cool, as sometimes (many times really) we might not need or want to do that.
+
+However, if we do...let's say to use this data later in another script, or to share what we found with others, we need to get the new dataset out of R and into a file saved to our computer itself.
+
+So how do we do *that*?
+
+```{r}
+#special R binary format
+saveRDS(sarasota_q1, "data/sarasota_q1_flights.rds")
+
+```
+
+We can also save to a whole host of other file formats, some of which you may have heard of, and other not. Let's pick one that you have: Excel.
+
+Saving to Excel is as simple as the following using the `writexl` package...
+
+```{r}
+
+write_xlsx(sarasota_q1, "data/sarasota_q1_flights.xlsx")
+
+```
+
+Now that we've saved our New York to Sarasota flights as a file, let's use that file for the next lesson.
